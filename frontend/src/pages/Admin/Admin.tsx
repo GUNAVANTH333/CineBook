@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { moviesApi, multiplexesApi, showsApi } from '../../api/services'
 import { useToast } from '../../context/ToastContext'
 import { TriangleAlert } from 'lucide-react'
-import type { Movie, Multiplex } from '../../types'
+import type { Movie, Multiplex, Show } from '../../types'
+import { onPosterError, posterSrc } from '../../utils/placeholder'
 import './Admin.css'
 
 type Tab = 'movies' | 'multiplexes' | 'shows'
@@ -68,7 +69,7 @@ const MoviesPanel: React.FC<{ movies: Movie[]; onRefresh: () => void; showToast:
       await moviesApi.delete(id)
       showToast('Movie deleted', 'success')
       onRefresh()
-    } catch { showToast('Delete failed', 'error') }
+    } catch (err: any) { showToast(err.response?.data?.message || 'Delete failed', 'error') }
   }
 
   return (
@@ -111,8 +112,8 @@ const MoviesPanel: React.FC<{ movies: Movie[]; onRefresh: () => void; showToast:
           <div className="admin-list">
             {movies.map(m => (
               <div key={m.id} className="admin-list-item">
-                <img src={m.posterUrl} alt={m.title} className="admin-item-img"
-                  onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/44x60/18181f/5e5c66?text=🎬' }} />
+                <img src={posterSrc(m.posterUrl)} alt={m.title} className="admin-item-img"
+                  onError={onPosterError} />
                 <div className="admin-item-info">
                   <div className="admin-item-title">{m.title}</div>
                   <div className="admin-item-sub">{m.genre} · {m.language} · {m.durationMinutes}min · {m.rating}</div>
@@ -144,6 +145,15 @@ const MultiplexesPanel: React.FC<{ multiplexes: Multiplex[]; onRefresh: () => vo
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed', 'error')
     } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Delete "${name}" and all its screens?`)) return
+    try {
+      await multiplexesApi.delete(id)
+      showToast('Multiplex deleted', 'success')
+      onRefresh()
+    } catch (err: any) { showToast(err.response?.data?.message || 'Delete failed', 'error') }
   }
 
   const handleAddScreen = async (e: React.FormEvent) => {
@@ -224,10 +234,13 @@ const MultiplexesPanel: React.FC<{ multiplexes: Multiplex[]; onRefresh: () => vo
                     <div className="admin-item-title">{m.name}</div>
                     <div className="admin-item-sub">{m.city} · {m.location} · {m.screens.length} screen(s)</div>
                   </div>
-                  <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                    onClick={() => setScreenForm({ mId: m.id, screenNumber: 1, totalRows: 10, totalColumns: 15, capacity: 150 })}>
-                    + Screen
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                      onClick={() => setScreenForm({ mId: m.id, screenNumber: 1, totalRows: 10, totalColumns: 15, capacity: 150 })}>
+                      + Screen
+                    </button>
+                    <button className="admin-delete-btn" onClick={() => handleDelete(m.id, m.name)}>✕</button>
+                  </div>
                 </div>
                 {m.screens.length > 0 && (
                   <div className="screen-chips">
@@ -250,6 +263,10 @@ const MultiplexesPanel: React.FC<{ multiplexes: Multiplex[]; onRefresh: () => vo
 const ShowsPanel: React.FC<{ movies: Movie[]; multiplexes: Multiplex[]; showToast: any }> = ({ movies, multiplexes, showToast }) => {
   const [form, setForm] = useState({ movieId: '', screenId: '', showTime: '', basePrice: 200 })
   const [saving, setSaving] = useState(false)
+  const [shows, setShows] = useState<Show[]>([])
+
+  const loadShows = () => showsApi.getAll().then(r => setShows(r.data.data))
+  useEffect(() => { loadShows() }, [])
 
   const screens = multiplexes.flatMap(m => m.screens.map(s => ({ ...s, multiplexName: m.name })))
 
@@ -260,13 +277,23 @@ const ShowsPanel: React.FC<{ movies: Movie[]; multiplexes: Multiplex[]; showToas
       await showsApi.create({ ...form, basePrice: Number(form.basePrice), showTime: new Date(form.showTime).toISOString() })
       showToast('Show created! Seat map auto-generated.', 'success')
       setForm({ movieId: '', screenId: '', showTime: '', basePrice: 200 })
+      loadShows()
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed to create show', 'error')
     } finally { setSaving(false) }
   }
 
+  const handleDelete = async (id: string, title: string) => {
+    if (!window.confirm(`Delete the show for "${title}"?`)) return
+    try {
+      await showsApi.delete(id)
+      showToast('Show deleted', 'success')
+      loadShows()
+    } catch (err: any) { showToast(err.response?.data?.message || 'Delete failed', 'error') }
+  }
+
   return (
-    <div className="admin-panel" style={{ gridTemplateColumns: '1fr' }}>
+    <div className="admin-panel">
       <div className="admin-panel-left" style={{ maxWidth: 480 }}>
         <h3 className="panel-section-title">Schedule New Show</h3>
         <form className="admin-form" onSubmit={handleSubmit}>
@@ -306,6 +333,27 @@ const ShowsPanel: React.FC<{ movies: Movie[]; multiplexes: Multiplex[]; showToas
             </p>
           )}
         </form>
+      </div>
+
+      <div className="admin-panel-right">
+        <h3 className="panel-section-title">Upcoming Shows ({shows.length})</h3>
+        {shows.length === 0 ? (
+          <p className="admin-empty">No upcoming shows scheduled.</p>
+        ) : (
+          <div className="admin-list">
+            {shows.map(s => (
+              <div key={s.id} className="admin-list-item">
+                <div className="admin-item-info">
+                  <div className="admin-item-title">{s.movie.title}</div>
+                  <div className="admin-item-sub">
+                    {s.screen.multiplex.name} · Screen {s.screen.screenNumber} · {new Date(s.showTime).toLocaleString()} · ₹{s.basePrice}
+                  </div>
+                </div>
+                <button className="admin-delete-btn" onClick={() => handleDelete(s.id, s.movie.title)}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -26,6 +26,7 @@ export const multiplexesApi = {
   create: (data: Omit<Multiplex, 'id' | 'screens'>) => api.post<ApiResponse<Multiplex>>('/multiplexes', data),
   addScreen: (id: string, data: { screenNumber: number; totalRows: number; totalColumns: number; capacity: number }) =>
     api.post<ApiResponse<any>>(`/multiplexes/${id}/screens`, data),
+  delete: (id: string) => api.delete<ApiResponse<null>>(`/multiplexes/${id}`),
 }
 
 // ---- Shows ----
@@ -35,6 +36,7 @@ export const showsApi = {
   getSeatMap: (id: string) => api.get<ApiResponse<SeatMapEntry[]>>(`/shows/${id}/seats`),
   create: (data: { movieId: string; screenId: string; showTime: string; basePrice: number }) =>
     api.post<ApiResponse<Show>>('/shows', data),
+  delete: (id: string) => api.delete<ApiResponse<null>>(`/shows/${id}`),
 }
 
 // ---- Bookings ----
