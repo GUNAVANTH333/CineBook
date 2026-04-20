@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { showsApi, moviesApi } from '../../api/services'
 import { MonitorPlay } from 'lucide-react'
 import type { Show, Movie } from '../../types'
+import { onPosterError, posterSrc } from '../../utils/placeholder'
 import './Shows.css'
 
 const Shows: React.FC = () => {
@@ -79,10 +80,10 @@ const Shows: React.FC = () => {
               <div key={movie.id} className="shows-group">
                 <div className="shows-group-header">
                   <img
-                    src={movie.posterUrl}
+                    src={posterSrc(movie.posterUrl)}
                     alt={movie.title}
                     className="shows-group-poster"
-                    onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x64/18181f/5e5c66?text=No+Image' }}
+                    onError={onPosterError}
                   />
                   <div>
                     <h2 className="shows-group-title">{movie.title}</h2>

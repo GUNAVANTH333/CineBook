@@ -4,6 +4,7 @@ import { bookingsApi } from '../../api/services'
 import { useToast } from '../../context/ToastContext'
 import { Ticket, CalendarDays, Clock, Armchair } from 'lucide-react'
 import type { Booking } from '../../types'
+import { onPosterError, posterSrc } from '../../utils/placeholder'
 import './MyBookings.css'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -78,9 +79,9 @@ const BookingCard: React.FC<{ booking: Booking }> = ({ booking }) => {
     <Link to={`/booking/${booking.id}`} className="booking-card">
       <div className="booking-card-poster">
         <img
-          src={booking.show.movie.posterUrl}
+          src={posterSrc(booking.show.movie.posterUrl)}
           alt={booking.show.movie.title}
-          onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80x110/18181f/5e5c66?text=No+Image' }}
+          onError={onPosterError}
         />
       </div>
       <div className="booking-card-info">

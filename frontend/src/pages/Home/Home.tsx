@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { moviesApi, showsApi } from '../../api/services'
 import { Globe, Clock, Star, Clapperboard } from 'lucide-react'
 import type { Movie, Show } from '../../types'
+import { onPosterError, posterSrc } from '../../utils/placeholder'
 import './Home.css'
 
 const GENRE_FILTERS = ['All', 'Action', 'Drama', 'Comedy', 'Sci-Fi', 'Thriller', 'Horror', 'Romance']
@@ -126,10 +127,10 @@ const MovieCard: React.FC<{ movie: Movie; shows: Show[] }> = ({ movie, shows }) 
     <Link to={`/shows?movieId=${movie.id}`} className="movie-card">
       <div className="movie-poster-wrap">
         <img
-          src={movie.posterUrl}
+          src={posterSrc(movie.posterUrl)}
           alt={movie.title}
           className="movie-poster"
-          onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x450/18181f/5e5c66?text=No+Image' }}
+          onError={onPosterError}
         />
         <div className="movie-poster-overlay">
           <span className="movie-rating">{movie.rating}</span>
