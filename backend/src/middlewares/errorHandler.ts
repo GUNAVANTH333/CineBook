@@ -28,6 +28,26 @@ export const errorHandler = (
     return;
   }
 
+  const code = (err as { code?: unknown }).code;
+  if (typeof code === "string") {
+    if (code === "P2003") {
+      res.status(409).json({
+        success: false,
+        message: "Cannot delete: this record is still referenced by related data.",
+        ...(isDev ? { stack: err.stack } : {}),
+      });
+      return;
+    }
+    if (code === "P2025") {
+      res.status(404).json({
+        success: false,
+        message: "Record not found.",
+        ...(isDev ? { stack: err.stack } : {}),
+      });
+      return;
+    }
+  }
+
   // Unhandled / programmer errors
   console.error("[Unhandled Error]", err);
 
