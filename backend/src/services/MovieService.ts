@@ -1,6 +1,6 @@
 import { movieRepository } from "../repositories/MovieRepository.js";
 import { Movie } from "../generated/prisma/client.js";
-import { NotFoundError } from "../utils/AppError.js";
+import { NotFoundError, ConflictError } from "../utils/AppError.js";
 
 interface CreateMovieDto {
   title: string;
@@ -41,7 +41,12 @@ export class MovieService {
 
   async delete(id: string): Promise<void> {
     await this.getById(id);
-    await movieRepository.delete(id);
+    const { blockedByBookings } = await movieRepository.delete(id);
+    if (blockedByBookings) {
+      throw new ConflictError(
+        "Cannot delete movie: there are existing bookings for its shows. Cancel those bookings first."
+      );
+    }
   }
 }
 

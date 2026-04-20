@@ -18,5 +18,6 @@ router.get("/:id", (req, res, next) => showController.getById(req, res, next));
 router.get("/:id/seats", (req, res, next) => showController.getSeatMap(req, res, next));
 router.post("/", authenticate, authorize("ADMIN"), validate(createShowSchema), (req, res, next) => showController.create(req, res, next));
 router.post("/repair-seats", authenticate, authorize("ADMIN"), (req, res, next) => showController.repairSeatMaps(req, res, next));
+router.delete("/:id", authenticate, authorize("ADMIN"), (req, res, next) => showController.delete(req, res, next));
 
 export default router;

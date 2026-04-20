@@ -61,6 +61,16 @@ export class ShowService {
 
     return show;
   }
+  async delete(id: string): Promise<void> {
+    await this.getById(id);
+    const { blockedByBookings } = await showRepository.delete(id);
+    if (blockedByBookings) {
+      throw new ConflictError(
+        "Cannot delete show: it has existing bookings. Cancel those bookings first."
+      );
+    }
+  }
+
   async repairSeatMaps(): Promise<{ screensFixed: number; showsFixed: number }> {
     let screensFixed = 0;
     let showsFixed = 0;

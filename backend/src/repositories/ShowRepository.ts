@@ -62,6 +62,17 @@ export class ShowRepository {
   async updateStatus(id: string, status: ShowStatus): Promise<Show> {
     return prisma.show.update({ where: { id }, data: { status } });
   }
+
+  async delete(id: string): Promise<{ blockedByBookings: boolean }> {
+    return prisma.$transaction(async (tx) => {
+      const bookings = await tx.booking.count({ where: { showId: id } });
+      if (bookings > 0) return { blockedByBookings: true };
+
+      await tx.showSeat.deleteMany({ where: { showId: id } });
+      await tx.show.delete({ where: { id } });
+      return { blockedByBookings: false };
+    });
+  }
 }
 
 export const showRepository = new ShowRepository();

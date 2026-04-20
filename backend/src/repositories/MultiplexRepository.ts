@@ -34,8 +34,30 @@ export class MultiplexRepository {
     return prisma.multiplex.update({ where: { id }, data });
   }
 
-  async delete(id: string): Promise<Multiplex> {
-    return prisma.multiplex.delete({ where: { id } });
+  async delete(id: string): Promise<{ blockedByBookings: boolean }> {
+    return prisma.$transaction(async (tx) => {
+      const screens = await tx.screen.findMany({ where: { multiplexId: id }, select: { id: true } });
+      const screenIds = screens.map((s) => s.id);
+
+      if (screenIds.length > 0) {
+        const shows = await tx.show.findMany({ where: { screenId: { in: screenIds } }, select: { id: true } });
+        const showIds = shows.map((s) => s.id);
+
+        if (showIds.length > 0) {
+          const bookings = await tx.booking.count({ where: { showId: { in: showIds } } });
+          if (bookings > 0) return { blockedByBookings: true };
+
+          await tx.showSeat.deleteMany({ where: { showId: { in: showIds } } });
+          await tx.show.deleteMany({ where: { id: { in: showIds } } });
+        }
+
+        await tx.seat.deleteMany({ where: { screenId: { in: screenIds } } });
+        await tx.screen.deleteMany({ where: { multiplexId: id } });
+      }
+
+      await tx.multiplex.delete({ where: { id } });
+      return { blockedByBookings: false };
+    });
   }
 
   async addScreen(data: {

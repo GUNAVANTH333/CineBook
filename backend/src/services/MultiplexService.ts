@@ -1,7 +1,7 @@
 import { multiplexRepository } from "../repositories/MultiplexRepository.js";
 import { seatRepository } from "../repositories/SeatRepository.js";
 import { Multiplex, Screen } from "../generated/prisma/client.js";
-import { NotFoundError } from "../utils/AppError.js";
+import { NotFoundError, ConflictError } from "../utils/AppError.js";
 
 interface CreateMultiplexDto {
   name: string;
@@ -39,7 +39,12 @@ export class MultiplexService {
 
   async delete(id: string): Promise<void> {
     await this.getById(id);
-    await multiplexRepository.delete(id);
+    const { blockedByBookings } = await multiplexRepository.delete(id);
+    if (blockedByBookings) {
+      throw new ConflictError(
+        "Cannot delete multiplex: there are existing bookings for its shows. Cancel those bookings first."
+      );
+    }
   }
 
   async addScreen(multiplexId: string, dto: AddScreenDto): Promise<Screen> {

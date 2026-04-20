@@ -32,6 +32,15 @@ export class ShowController {
     }
   }
 
+  async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await showService.delete(req.params["id"] as string);
+      sendSuccess(res, null, "Show deleted successfully");
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getSeatMap(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const seatMap = await seatService.getSeatMapForShow(req.params["id"] as string);

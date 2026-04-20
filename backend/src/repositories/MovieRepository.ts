@@ -34,8 +34,22 @@ export class MovieRepository {
     return prisma.movie.update({ where: { id }, data });
   }
 
-  async delete(id: string): Promise<Movie> {
-    return prisma.movie.delete({ where: { id } });
+  async delete(id: string): Promise<{ blockedByBookings: boolean }> {
+    return prisma.$transaction(async (tx) => {
+      const shows = await tx.show.findMany({ where: { movieId: id }, select: { id: true } });
+      const showIds = shows.map((s) => s.id);
+
+      if (showIds.length > 0) {
+        const bookings = await tx.booking.count({ where: { showId: { in: showIds } } });
+        if (bookings > 0) return { blockedByBookings: true };
+
+        await tx.showSeat.deleteMany({ where: { showId: { in: showIds } } });
+        await tx.show.deleteMany({ where: { movieId: id } });
+      }
+
+      await tx.movie.delete({ where: { id } });
+      return { blockedByBookings: false };
+    });
   }
 }
 
