@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { Show, ShowStatus } from "../generated/prisma/client.js";
+import { purgeShows } from "./cascade.js";
 
 export class ShowRepository {
   async findAll(filters: { movieId?: string; city?: string }): Promise<Show[]> {
@@ -64,14 +65,7 @@ export class ShowRepository {
   }
 
   async delete(id: string): Promise<{ blockedByBookings: boolean }> {
-    return prisma.$transaction(async (tx) => {
-      const bookings = await tx.booking.count({ where: { showId: id } });
-      if (bookings > 0) return { blockedByBookings: true };
-
-      await tx.showSeat.deleteMany({ where: { showId: id } });
-      await tx.show.delete({ where: { id } });
-      return { blockedByBookings: false };
-    });
+    return prisma.$transaction((tx) => purgeShows(tx, [id]));
   }
 }
 

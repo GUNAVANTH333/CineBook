@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { Movie } from "../generated/prisma/client.js";
+import { purgeShows } from "./cascade.js";
 
 export class MovieRepository {
   async findAll(): Promise<Movie[]> {
@@ -37,15 +38,8 @@ export class MovieRepository {
   async delete(id: string): Promise<{ blockedByBookings: boolean }> {
     return prisma.$transaction(async (tx) => {
       const shows = await tx.show.findMany({ where: { movieId: id }, select: { id: true } });
-      const showIds = shows.map((s) => s.id);
-
-      if (showIds.length > 0) {
-        const bookings = await tx.booking.count({ where: { showId: { in: showIds } } });
-        if (bookings > 0) return { blockedByBookings: true };
-
-        await tx.showSeat.deleteMany({ where: { showId: { in: showIds } } });
-        await tx.show.deleteMany({ where: { movieId: id } });
-      }
+      const result = await purgeShows(tx, shows.map((s) => s.id));
+      if (result.blockedByBookings) return result;
 
       await tx.movie.delete({ where: { id } });
       return { blockedByBookings: false };

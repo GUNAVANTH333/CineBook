@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { Multiplex, Screen } from "../generated/prisma/client.js";
+import { purgeShows } from "./cascade.js";
 
 export class MultiplexRepository {
   async findAll(): Promise<(Multiplex & { screens: Screen[] })[]> {
@@ -41,15 +42,8 @@ export class MultiplexRepository {
 
       if (screenIds.length > 0) {
         const shows = await tx.show.findMany({ where: { screenId: { in: screenIds } }, select: { id: true } });
-        const showIds = shows.map((s) => s.id);
-
-        if (showIds.length > 0) {
-          const bookings = await tx.booking.count({ where: { showId: { in: showIds } } });
-          if (bookings > 0) return { blockedByBookings: true };
-
-          await tx.showSeat.deleteMany({ where: { showId: { in: showIds } } });
-          await tx.show.deleteMany({ where: { id: { in: showIds } } });
-        }
+        const result = await purgeShows(tx, shows.map((s) => s.id));
+        if (result.blockedByBookings) return result;
 
         await tx.seat.deleteMany({ where: { screenId: { in: screenIds } } });
         await tx.screen.deleteMany({ where: { multiplexId: id } });
