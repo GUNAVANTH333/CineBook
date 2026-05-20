@@ -26,7 +26,7 @@ CineBook lets users browse movies, select showtimes, pick seats, and pay — all
 ## Project Structure
 
 ```
-SESD_Project_CineBook/
+CineBook/
 ├── backend/
 │   ├── src/
 │   │   ├── config/
